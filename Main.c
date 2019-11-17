@@ -2,12 +2,16 @@
 #include <stdio.h>
 #include <string.h>
 #include "file_system_header.h"
-
+#include <time.h>
 ////////////Functions Prototype///////////////////////
 void print_FAT(my_FAT *);
 int make_disk(char *);
 FILE mount();
 void make_root_dir();
+char * find_free_meta();
+char * find_free_data();
+int  find_free_fat_entry(char *);
+char * get_time();
 ////////////Global Data Structure//////////////////////
 FILE * file_pointer;
 char buffer [32]; //use to convert int to string via sprintf
@@ -25,7 +29,9 @@ int main(){
   strcpy (fat_tab->data_pointer, "4");
   strcpy (fat_tab->file_name, "hel");
   print_FAT(fat_tab);*/
-  make_root_dir();
+  //make_root_dir();
+  char * time = get_time();
+  printf("%s\n", time);
     
 }
 
@@ -44,7 +50,8 @@ void print_FAT(my_FAT * fat){
 }
 
 void make_root_dir(){
-  //fseek(file_pointer, 0, SEEK_SET);//appropriate when load into a mounted disk
+  file_pointer = fopen(DISK, "r+");
+  fseek(file_pointer, 0, SEEK_SET);//appropriate when load into a mounted disk
   
   /*            Initialize the first FAT in the linked list          */
   my_FAT * root = (my_FAT *)malloc(32 * sizeof(my_FAT*));
@@ -61,14 +68,38 @@ void make_root_dir(){
   
   strcpy(root->next_pointer, "-1");
 
-  //fwrite(root, 32 * sizeof(my_FAT*), 1, file_pointer);
+  fwrite(root, 32 * sizeof(my_FAT*), 1, file_pointer);
   
-  //print_FAT(root);
+  print_FAT(root);
 
   /*          Initialize the first data area                 */
-  //fseek(file_pointer, SIZE_OF_BLOCK * data_begin, SEEK_SET);
+  fseek(file_pointer, SIZE_OF_BLOCK * data_begin, SEEK_SET);
   dir_current = data_begin * SIZE_OF_BLOCK;
-  //fputs(".", file_pointer);
+  fputs(".", file_pointer);
 
+  /*          Initialize the first meta area                */
+  fseek(file_pointer, SIZE_OF_BLOCK * meta_begin, SEEK_SET);
+  
 
+}
+char * find_free_meta(){
+  return NULL;
+
+}
+
+char * find_free_data(){
+  return NULL;
+
+}
+int find_free_fat_entry(char * file_name){
+  return -1;
+}
+char * get_time(){
+  char * holder = (char *)malloc(32 *sizeof(char));
+  time_t current_time;
+  struct tm * info_time;
+  time(&current_time);
+  info_time = localtime(&current_time);
+  holder = asctime (info_time);
+  return holder;
 }
