@@ -18,8 +18,8 @@ typedef struct meta_data {
   char file_name [15];
   char extension [3];
   char file_size [4];
-  char create_time [8];
-  char modify_time [8];
+  char create_time [27];
+  char modify_time [27];
   
 }my_Meta;
 
