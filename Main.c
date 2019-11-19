@@ -12,6 +12,7 @@ char * find_free_meta();
 char * find_free_data();
 char * find_free_fat_entry();
 char * get_time();
+int find_File(char * file_name);
 void print_meta(my_Meta *);
 ////////////Global Data Structure//////////////////////
 FILE * file_pointer;
@@ -23,6 +24,9 @@ double dir_current;
 /////////////////Main Program
 int main(){
   int a = make_disk("VIRTUAL_DISK");
+  file_pointer = fopen(DISK, "r+");
+  //char * test = malloc(32 * sizeof(my_FAT*));
+  //test = find_free_data();
   //my_FAT * fat_tab =  malloc(32 * sizeof(my_FAT*));
   /*strcpy (fat_tab->check_bit_valid, "1");
   strcpy (fat_tab->meta_data_pointer, "2");
@@ -30,15 +34,15 @@ int main(){
   strcpy (fat_tab->data_pointer, "4");
   strcpy (fat_tab->file_name, "hel");
   print_FAT(fat_tab);*/
-  make_root_dir();
-  char * time = get_time();
+  //make_root_dir();
+  //char * time = get_time();
   /*
   my_Meta * meta = malloc(32 * sizeof(my_Meta *));
   strcpy(meta->create_time, time);
   strcpy(meta->modify_time, time);
   print_meta(meta);
   */
-  printf("%s\n", time);
+  //printf("%s\n", test);
   
     
 }
@@ -141,15 +145,31 @@ char * find_free_data(){
     fread(valid_check, 1 , 1, file_pointer);
 
     if(strcmp(valid_check, "") == 0){
-      sprintf(buffer, "%u", (SIZE_OF_BLOCK * data_begin / 16) + (i / SIZE_OF_BLOCK * 32) + 1 );
+      sprintf(buffer, "%u", (SIZE_OF_BLOCK * data_begin / 16) + (i / SIZE_OF_BLOCK * 32) + 1 ); //allocate enough space to write :P
       return buffer;
     }
   }
   return "Error";
 
 }
+int find_File(char * file_name){
+  char valid_check[15];
+  unsigned int return_index;
+  fseek(file_pointer, 0, SEEK_SET);
+  for(size_t i = 0; i < (NUM_BLOCKS * SIZE_OF_BLOCK); i = i + FAT_ENTRY_SIZE){
+    fseek(file_pointer, i + 1, SEEK_SET);
+    fread(valid_check, 15, 1, file_pointer);
+    if(strcmp(valid_check, file_name) == 0){
+      return_index = (i / 16) + 1;
+      return return_index; //return the index inside the FAT
+    }
 
-char * get_time(){
+  }
+  
+  return -1; //in case, file cannot be found
+
+}
+char * get_time(){ //get the current time including the date
   char * holder = (char *)malloc(32 *sizeof(char));
   time_t current_time;
   struct tm * info_time;
