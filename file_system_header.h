@@ -4,6 +4,10 @@
 #define SIZE_OF_BLOCK 512
 #define meta_begin 1
 #define data_begin 3
+#define FAT_ENTRY_SIZE 32
+#define META_ENTRY_SIZE 96
+#define DATA_ENTRY_SIZE 512
+
 
 typedef struct FAT {
   char check_bit_valid[1];
