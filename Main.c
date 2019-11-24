@@ -22,8 +22,9 @@ void create_file(char * f, int d);
 FILE mount();
 void get_choice(char g []);
 void file_shutdown();
-void write_file();
-void read_file();
+void write_file(char * data, char * file);
+void read_file(char * file);
+void delete_file(char * file);
 ////////////Global Data Structure//////////////////////
 FILE * file_pointer;
 char buffer [32]; //use to convert int to string via sprintf
@@ -99,6 +100,11 @@ void get_choice(char choice [] ){
     puts("What is the name of the file you want to read?");
     scanf("%15s", holder_file);
     read_file(holder_file);
+  }
+  else if(strcmp(choice, "4") == 0){
+    puts("What is the name of the file you want to read?");
+    scanf("%15s", holder_file);
+    delete_file(holder_file);
   }
   else if(strcmp(choice, "5") == 0){
     list_files();
@@ -291,7 +297,7 @@ void create_file(char * file_name, int dir){
   fseek(file_pointer, 16 * meta_i, SEEK_SET);
   strcpy(new_meta_entry->file_name, file_name);
   strcpy(new_meta_entry->extension, "");
-  strcpy(new_meta_entry->file_size, "100");
+  strcpy(new_meta_entry->file_size, "512");
   strcpy(new_meta_entry->create_time, get_time());
   strcpy(new_meta_entry->modify_time, get_time());
   fwrite(new_meta_entry, sizeof(my_Meta), 1, file_pointer);
@@ -317,14 +323,14 @@ void write_file(char * data, char * file_name){
   //data_begin + 16 th place next to the FAT index of the file
   int data_length = strlen(data);
   if(data_length >= SIZE_OF_BLOCK){
-    perror("Exceeding the permitted amount");
+    printf("Exceeding the permitted amount\n");
     return;
 
   }
   int FAT_index = find_File(file_name);
   
   if(FAT_index == -1){
-    perror("No such file existed on this disk");
+    printf("No such file existed on this disk");
     return;
   }
   char * data_pointer = malloc(9*sizeof(char));
@@ -344,12 +350,14 @@ void write_file(char * data, char * file_name){
 
 }
 void read_file(char * file_name){
+  
   int FAT_index = find_File(file_name);
   if(FAT_index == -1){
-    perror("No such file existed on this disk");
+    perror("File is empty. Please write something");
     return;
   }
   char data_pointer[9];
+  
   int data_offset;
 
   fseek(file_pointer, 16 * (FAT_index - 1), SEEK_SET); //go from begin to current FAT_index
@@ -375,7 +383,7 @@ void read_file(char * file_name){
     
   } 
   printf("\n");
-  
+  puts("------------------------------------");
   
 
 }
@@ -396,4 +404,57 @@ void file_shutdown(){
   fclose(file_pointer);
   exit(0);
 
+}
+void delete_file(char * file_name){
+
+  my_Data * clean_data = malloc(DATA_ENTRY_SIZE * sizeof(char)); //get an empty 512 blocks
+
+  my_Meta * clean_meta = malloc(META_ENTRY_SIZE * sizeof(my_Meta));
+
+  my_FAT * clean_FAT_entry = malloc(FAT_ENTRY_SIZE * sizeof(my_FAT));
+
+  int FAT_index = find_File(file_name); //get the FAT index of this file
+  
+  if(FAT_index == -1){
+    printf("No such file existed on this disk");
+    return;
+  }
+  /*Delete the FAT entry of the file*/
+  fseek(file_pointer, 16 * (FAT_index - 1), SEEK_SET);
+  fwrite(clean_FAT_entry, sizeof(my_FAT),1, file_pointer);
+
+  /*Delete the data of this file*/
+  
+  char * data_pointer = malloc(9 * sizeof(char));
+  
+  fseek(file_pointer, 16 * (FAT_index - 1), SEEK_SET);       //move to the current file FAT index
+  fseek(file_pointer, 16 + data_begin, SEEK_CUR);         //move to the current data section of this FAT index by 3 offset
+  fread(data_pointer, 1, 9, file_pointer);              //read and give free space to data pointer
+  int offset = atoi(data_pointer) - 1;
+  fseek(file_pointer, offset * 16, SEEK_SET );         //translate the amount of space from data pointer and move from beginning of file to the position
+  fwrite(clean_data, sizeof(my_Data),1, file_pointer); //write an empty blocks to it
+
+  /*Delete the meta data of this file*/
+  char * meta_pointer = malloc(9 * sizeof(char));
+
+  fseek(file_pointer, 16 * (FAT_index - 1), SEEK_SET);
+  fseek(file_pointer, 16 - data_begin, SEEK_CUR);
+  fread(meta_pointer, 1, 9, file_pointer);
+  int meta_offset = atoi(meta_pointer) - 1;
+  fseek(file_pointer, meta_offset * 16, SEEK_SET);
+  fwrite(clean_meta, sizeof(my_Meta), 1, file_pointer);
+
+  /*Undisplay the deleted file in the dir section*/
+  char buffer [32] = {""};
+  char delete [16] = {""};
+  size_t i = 0;
+  while(i < 32){
+    fseek(file_pointer, dir_current + (16 * i), SEEK_SET); //go through the current directory in the file sys
+    fread(buffer, 1, 15, file_pointer); //read in the contents of the directory
+    if(strcmp(buffer, file_name) == 0){ //if there is the name of the file you want to delete
+      fseek(file_pointer, dir_current + (16 * i), SEEK_SET); //move the file pointer to it
+      fwrite(delete, sizeof(16), 1, file_pointer);
+    }
+    i++;
+  }
 }
