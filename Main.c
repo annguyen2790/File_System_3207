@@ -3,6 +3,7 @@
 #include <string.h>
 #include "file_system_header.h"
 #include <time.h>
+#include <unistd.h>
 ////////////Functions Prototype///////////////////////
 void print_FAT(my_FAT *);
 int make_disk(char *);
@@ -21,11 +22,12 @@ void create_file(char * f, int d);
 FILE mount();
 void get_choice(char g []);
 void file_shutdown();
+void write_file();
+void read_file();
 ////////////Global Data Structure//////////////////////
 FILE * file_pointer;
 char buffer [32]; //use to convert int to string via sprintf
 double dir_current;
-
 
 /////////////////Main Program
 int main(){
@@ -78,12 +80,27 @@ void display_choices(){
 }
 void get_choice(char choice [] ){
   char holder_file [15];
+  char * data_written = malloc(SIZE_OF_BLOCK*sizeof(char));
   if(strcmp(choice, "1") == 0 ){
     puts("Create a file. Please name your file!");
     scanf("%15s", holder_file);
     create_file(holder_file, 0);
 
-  }else if(strcmp(choice, "5") == 0){
+  }
+  else if(strcmp(choice, "2") == 0){ 
+    puts("What is the name of the file you want to write to?");
+    scanf("%15s", holder_file);
+    puts("What do you want to write?");
+    if(read(0, data_written, 512) != 0){
+    }
+    write_file(data_written, holder_file);
+  }
+  else if(strcmp(choice, "3") == 0){
+    puts("What is the name of the file you want to read?");
+    scanf("%15s", holder_file);
+    read_file(holder_file);
+  }
+  else if(strcmp(choice, "5") == 0){
     list_files();
 
   }else if(strcmp(choice, "6") == 0){
@@ -279,22 +296,103 @@ void create_file(char * file_name, int dir){
   strcpy(new_meta_entry->modify_time, get_time());
   fwrite(new_meta_entry, sizeof(my_Meta), 1, file_pointer);
   print_meta(new_meta_entry);
+  printf("FILE CREATED SUCCESS!\n");
+
+  size_t i = 0;
+  char valid_read[1];
+  for( i = 0; i < 32; i++){
+    fseek(file_pointer, dir_current + (i * 16), SEEK_SET);
+    fread(valid_read, 1, 1, file_pointer);
+    if(strcmp(valid_read, "") == 0){
+      fseek(file_pointer, -1, SEEK_CUR);
+      fwrite(file_name, 15, 1, file_pointer);
+      break;
+    }
+  }
 
 }
+void write_file(char * data, char * file_name){
+  //find the FAT index of the file
+  //check length of written data and make sure it is not over the size of block
+  //data_begin + 16 th place next to the FAT index of the file
+  int data_length = strlen(data);
+  if(data_length >= SIZE_OF_BLOCK){
+    perror("Exceeding the permitted amount");
+    return;
 
+  }
+  int FAT_index = find_File(file_name);
+  
+  if(FAT_index == -1){
+    perror("No such file existed on this disk");
+    return;
+  }
+  char * data_pointer = malloc(9*sizeof(char));
+  int data_offset;
+
+  fseek(file_pointer, 16 * (FAT_index - 1), SEEK_SET); //go from begin to current FAT_index
+
+  fseek(file_pointer, data_begin + 16, SEEK_CUR); //go to data section
+
+  fread(data_pointer, 1, 9, file_pointer);
+
+  data_offset = atoi(data_pointer);
+
+  fseek(file_pointer, 16 * (data_offset - 1), SEEK_SET);
+
+  fwrite(data, 1, SIZE_OF_BLOCK, file_pointer);
+
+}
+void read_file(char * file_name){
+  int FAT_index = find_File(file_name);
+  if(FAT_index == -1){
+    perror("No such file existed on this disk");
+    return;
+  }
+  char data_pointer[9];
+  int data_offset;
+
+  fseek(file_pointer, 16 * (FAT_index - 1), SEEK_SET); //go from begin to current FAT_index
+
+  fseek(file_pointer, data_begin + 16, SEEK_CUR); //go to data section
+
+  fread(data_pointer, 1, 9, file_pointer);
+
+  data_offset = atoi(data_pointer);
+
+  fseek(file_pointer, 16 *(data_offset -1), SEEK_SET);
+
+  char holder[SIZE_OF_BLOCK];
+
+  fread(holder, 1, SIZE_OF_BLOCK, file_pointer);
+  //printf("%c", holder[1]);
+  //printf("%c", holder[2]);
+  //printf("%c", holder[3]);
+  puts("------------------------------------");
+  for(int i = 0; i < strlen(holder); i++){
+    printf("%c", holder[i]);
+    //printf("WHAAAAAAAAA\n");
+    
+  } 
+  printf("\n");
+  
+  
+
+}
 void list_files(){
-  char file_name[15] = {"\0"};
+  char file_name[15] = {""};
   size_t i;
+  printf("Here is a list of file on this virtual disk:\n");
   for(i = 0; i < 32; i++){
     fseek(file_pointer, dir_current + (i * 16), SEEK_SET);
     fread(file_name, 1, 15, file_pointer);
-    printf("%s     ", file_name);
+    printf("%s    ", file_name);
   }
   printf("\n");
 
 }
 void file_shutdown(){
-  puts("Exited the file system");
+  puts("Exited the file system. All created files on this virtual disk is destroyed. Good bye!");
   fclose(file_pointer);
   exit(0);
 
