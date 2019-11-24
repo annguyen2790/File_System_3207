@@ -25,6 +25,7 @@ void file_shutdown();
 void write_file(char * data, char * file);
 void read_file(char * file);
 void delete_file(char * file);
+void display_info(char * file);
 ////////////Global Data Structure//////////////////////
 FILE * file_pointer;
 char buffer [32]; //use to convert int to string via sprintf
@@ -102,7 +103,7 @@ void get_choice(char choice [] ){
     read_file(holder_file);
   }
   else if(strcmp(choice, "4") == 0){
-    puts("What is the name of the file you want to read?");
+    puts("What is the name of the file you want to delete?");
     scanf("%15s", holder_file);
     delete_file(holder_file);
   }
@@ -330,7 +331,7 @@ void write_file(char * data, char * file_name){
   int FAT_index = find_File(file_name);
   
   if(FAT_index == -1){
-    printf("No such file existed on this disk");
+    printf("No such file existed on this disk\n");
     return;
   }
   char * data_pointer = malloc(9*sizeof(char));
@@ -353,7 +354,7 @@ void read_file(char * file_name){
   
   int FAT_index = find_File(file_name);
   if(FAT_index == -1){
-    perror("File is empty. Please write something");
+    printf("Unable to find FAT index or File is empty\n");
     return;
   }
   char data_pointer[9];
@@ -416,7 +417,7 @@ void delete_file(char * file_name){
   int FAT_index = find_File(file_name); //get the FAT index of this file
   
   if(FAT_index == -1){
-    printf("No such file existed on this disk");
+    printf("No such file existed on this disk\n");
     return;
   }
   /*Delete the FAT entry of the file*/
@@ -457,4 +458,7 @@ void delete_file(char * file_name){
     }
     i++;
   }
+}
+void display_info(char * file_name){
+  //to be implemented
 }
