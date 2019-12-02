@@ -18,7 +18,7 @@ void print_meta(my_Meta *);
 void mainDriver();
 void display_choices();
 void list_files();
-void create_file(char * f, int d);
+void create_file(char * f, char * d);
 FILE mount();
 void get_choice(char g []);
 void file_shutdown();
@@ -64,7 +64,6 @@ void mainDriver(){
   char get [3];
   puts("Welcome to my file system. Choose a number correspond to the comannd  below to use the file system!");
   while(1){
-    
     display_choices();
     scanf("%3s", get);
     get_choice(get);
@@ -77,7 +76,8 @@ void display_choices(){
   printf("3. Read a file\n");
   printf("4. Delete a file\n");
   printf("5. List files\n");
-  printf("6. Exit the file system!\n");
+  printf("6. Create a directory\n");
+  printf("7. Exit the file system!\n");
   
 }
 void get_choice(char choice [] ){
@@ -86,7 +86,7 @@ void get_choice(char choice [] ){
   if(strcmp(choice, "1") == 0 ){
     puts("Create a file. Please name your file!");
     scanf("%15s", holder_file);
-    create_file(holder_file, 0);
+    create_file(holder_file, "");
 
   }
   else if(strcmp(choice, "2") == 0){ 
@@ -111,6 +111,11 @@ void get_choice(char choice [] ){
     list_files();
 
   }else if(strcmp(choice, "6") == 0){
+    puts("Create a Directory. Please name your file!");
+    scanf("%15s", holder_file);
+    create_file(holder_file, "DIR");
+  }
+  else if(strcmp(choice, "7") == 0){
     file_shutdown();
   }
   else{
@@ -137,7 +142,7 @@ void print_FAT(my_FAT *  fat){ //use for debugging only
 }
 
 void make_root_dir(){
-  file_pointer = fopen(DISK, "r+");
+  //file_pointer = fopen(DISK, "r+");
   fseek(file_pointer, 0, SEEK_SET);//appropriate when load into a mounted disk
 
   /*            Initialize the first FAT in the linked list          */
@@ -202,7 +207,7 @@ char * find_free_meta(){
     fseek(file_pointer, i + (meta_begin * SIZE_OF_BLOCK), SEEK_SET);
     fread(valid_check, 15, 1, file_pointer);
     if(strcmp(valid_check, "") == 0){
-      sprintf(buffer, "%u", (meta_begin * SIZE_OF_BLOCK / 16) + 1 + (i / META_ENTRY_SIZE * 4 ) );
+      sprintf(buffer, "%u", (meta_begin * SIZE_OF_BLOCK / 16) + 1 + (i / META_ENTRY_SIZE) );
       return buffer;
     }
   }
@@ -228,12 +233,12 @@ char * find_free_data(){
 
 }
 int find_File(char * file_name){
-  char valid_check[15];
+  char valid_check[12];
   unsigned int return_index;
   fseek(file_pointer, 0, SEEK_SET);
   for(size_t i = 0; i < (NUM_BLOCKS * SIZE_OF_BLOCK); i = i + FAT_ENTRY_SIZE){
     fseek(file_pointer, i + 1, SEEK_SET);
-    fread(valid_check, 15, 1, file_pointer);
+    fread(valid_check, 12, 1, file_pointer);
     if(strcmp(valid_check, file_name) == 0){
       return_index = (i / 16) + 1;
       return return_index; //return the index inside the FAT
@@ -262,7 +267,7 @@ void print_meta(my_Meta * meta){ //print out meta information || use for Debuggi
   printf("Modified:: %s\n",meta->modify_time);
 }
 
-void create_file(char * file_name, int dir){
+void create_file(char * file_name, char * dir){
   
   my_FAT * new_fat_entry = malloc(32 * sizeof(my_FAT));
   my_Meta * new_meta_entry = malloc(32 * sizeof(my_Meta));
@@ -280,7 +285,12 @@ void create_file(char * file_name, int dir){
   if(strcmp(FAT_index, "Error") == 0){
     puts("Failed to get a free spot in the FAT");
   }
-  
+  //if file is a directory
+  if (strcmp(dir, "DIR") == 0){
+    int current_data = atoi(data_index) - 1;
+    dir_current = 16 *current_data;
+  }
+  //
   double meta_i = atol(meta_index) - 1;
   double data_i = atol(data_index) - 1;
   double FAT_i = atol(FAT_index) - 1;
@@ -291,7 +301,7 @@ void create_file(char * file_name, int dir){
   strcpy(new_fat_entry->meta_data_pointer, meta_index);
   strcpy(new_fat_entry->data_pointer, data_index);
   strcpy(new_fat_entry->next_pointer, "-1");
-  fwrite(new_fat_entry, sizeof(my_FAT), 1, file_pointer);
+  fwrite(new_fat_entry, 512, 1, file_pointer);
   print_FAT(new_fat_entry);
   //Meta ENTRY
   
@@ -301,7 +311,7 @@ void create_file(char * file_name, int dir){
   strcpy(new_meta_entry->file_size, "512");
   strcpy(new_meta_entry->create_time, get_time());
   strcpy(new_meta_entry->modify_time, get_time());
-  fwrite(new_meta_entry, sizeof(my_Meta), 1, file_pointer);
+  fwrite(new_meta_entry, 512, 1, file_pointer);
   print_meta(new_meta_entry);
   printf("FILE CREATED SUCCESS!\n");
 
@@ -316,6 +326,8 @@ void create_file(char * file_name, int dir){
       break;
     }
   }
+
+  
 
 }
 void write_file(char * data, char * file_name){
@@ -410,9 +422,9 @@ void delete_file(char * file_name){
 
   my_Data * clean_data = malloc(DATA_ENTRY_SIZE * sizeof(char)); //get an empty 512 blocks
 
-  my_Meta * clean_meta = malloc(META_ENTRY_SIZE * sizeof(my_Meta));
+  my_Meta * clean_meta = malloc(META_ENTRY_SIZE * sizeof(char));
 
-  my_FAT * clean_FAT_entry = malloc(FAT_ENTRY_SIZE * sizeof(my_FAT));
+  my_FAT * clean_FAT_entry = malloc(FAT_ENTRY_SIZE * sizeof(char));
 
   int FAT_index = find_File(file_name); //get the FAT index of this file
   

@@ -1,5 +1,3 @@
-
-//hello there
 #define DISK "VIRTUAL_DISK"
 #define NUM_BLOCKS 245
 #define SIZE_OF_BLOCK 512
