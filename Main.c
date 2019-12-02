@@ -77,7 +77,8 @@ void display_choices(){
   printf("4. Delete a file\n");
   printf("5. List files\n");
   printf("6. Create a directory\n");
-  printf("7. Exit the file system!\n");
+  printf("7. Display info about a file\n");
+  printf("8. Exit the file system!\n");
   
 }
 void get_choice(char choice [] ){
@@ -116,6 +117,11 @@ void get_choice(char choice [] ){
     create_file(holder_file, "DIR");
   }
   else if(strcmp(choice, "7") == 0){
+    puts("Which file would you like to find more info about?");
+    scanf("%15s", holder_file);
+    display_info(holder_file);
+  }
+  else if(strcmp(choice, "8") == 0){
     file_shutdown();
   }
   else{
@@ -234,9 +240,9 @@ char * find_free_data(){
 }
 int find_File(char * file_name){
   char valid_check[12];
-  unsigned int return_index;
+  unsigned int return_index = -1;
   fseek(file_pointer, 0, SEEK_SET);
-  for(size_t i = 0; i < (NUM_BLOCKS * SIZE_OF_BLOCK); i = i + FAT_ENTRY_SIZE){
+  for(int i = 0; i < (meta_begin * SIZE_OF_BLOCK); i = i + FAT_ENTRY_SIZE){
     fseek(file_pointer, i + 1, SEEK_SET);
     fread(valid_check, 12, 1, file_pointer);
     if(strcmp(valid_check, file_name) == 0){
@@ -246,7 +252,7 @@ int find_File(char * file_name){
 
   }
 
-  return -1; //in case, file cannot be found
+  return return_index; //in case, file cannot be found
 
 }
 char * get_time(){ //get the current time including the date
@@ -308,6 +314,9 @@ void create_file(char * file_name, char * dir){
   fseek(file_pointer, 16 * meta_i, SEEK_SET);
   strcpy(new_meta_entry->file_name, file_name);
   strcpy(new_meta_entry->extension, "");
+  if(strcmp(dir, "DIR") == 0){
+    strcpy(new_meta_entry->extension, "DIR");
+  }
   strcpy(new_meta_entry->file_size, "512");
   strcpy(new_meta_entry->create_time, get_time());
   strcpy(new_meta_entry->modify_time, get_time());
@@ -322,7 +331,7 @@ void create_file(char * file_name, char * dir){
     fread(valid_read, 1, 1, file_pointer);
     if(strcmp(valid_read, "") == 0){
       fseek(file_pointer, -1, SEEK_CUR);
-      fwrite(file_name, 15, 1, file_pointer);
+      fwrite(file_name, 16, 1, file_pointer);
       break;
     }
   }
@@ -343,7 +352,7 @@ void write_file(char * data, char * file_name){
   int FAT_index = find_File(file_name);
   
   if(FAT_index == -1){
-    printf("No such file existed on this disk\n");
+    printf("File index not found from WRITE\n");
     return;
   }
   char * data_pointer = malloc(9*sizeof(char));
@@ -365,8 +374,9 @@ void write_file(char * data, char * file_name){
 void read_file(char * file_name){
   
   int FAT_index = find_File(file_name);
+  
   if(FAT_index == -1){
-    printf("Unable to find FAT index or File is empty\n");
+    printf("Unable to find FAT index from READ\n");
     return;
   }
   char data_pointer[9];
@@ -472,5 +482,35 @@ void delete_file(char * file_name){
   }
 }
 void display_info(char * file_name){
+  char name [15] = "";
+  char extension[3] = "";
+  char time_created[27] = "";
+  char time_modified[27] = "";
+  
+  int FAT_index = find_File(file_name);
+  
+  if(FAT_index == -1){
+    printf("FAT index not found from DISPLAY INFO\n");
+    return;
+
+  }
+  fseek(file_pointer, 16 * (FAT_index - 1), SEEK_SET);
+  fseek(file_pointer, 13, SEEK_CUR);
+  char meta_pointer [10];
+  int holder;
+  fread(meta_pointer, 1, 10, file_pointer);
+  holder = atoi(meta_pointer) - 1;
+
+  fseek(file_pointer, 16 * holder, SEEK_SET);
+  
+  fread(name, 1, 15, file_pointer); //Name
+  fread(extension, 1, 3, file_pointer); //Extension
+  fread(time_created, 1, 27, file_pointer); //Created time
+  fread(time_modified, 1, 27, file_pointer); //Modified time
+
+  printf("Time Created:%s\n", time_created);
+  printf("Time Modified:%s\n", time_modified);
+}
+void change_directory(char * dir_name){
   //to be implemented
 }
