@@ -131,7 +131,7 @@ void get_choice(char choice [] ){ //get user input for commands to run
 
 }
 
-/*****************File System Level Functions***********************/
+                                                                   /*****************File System Level Functions***********************/
 FILE mount(){
   file_pointer = fopen(DISK, "r+"); //point the file pointer to the virtual disk
 
@@ -194,13 +194,13 @@ void make_root_dir(){
 }
 char * find_free_fat_entry(){
   char valid_check[2];
-  fseek(file_pointer, 0, SEEK_SET);
+  fseek(file_pointer, 0, SEEK_SET); //move the beginning of the disk
   unsigned int i;
   for(i = 0; i < SIZE_OF_BLOCK; i = i + FAT_ENTRY_SIZE){
-    fseek(file_pointer, i, SEEK_SET);
+    fseek(file_pointer, i, SEEK_SET); //move to each block within the FAT
     fread(valid_check, 1, 1, file_pointer);
     if(strcmp(valid_check, "") == 0){
-      sprintf(buffer, "%u", (i / 16) + 1);
+      sprintf(buffer, "%u", (i / 16) + 1); //translate the size into free space in the  global temp string buffer 
       return buffer;
     }
 
@@ -210,12 +210,12 @@ char * find_free_fat_entry(){
 char * find_free_meta(){
   char valid_check [15];
   unsigned int i;
-  fseek(file_pointer, meta_begin * SIZE_OF_BLOCK , SEEK_SET);
-  for(i = 0; i < meta_begin * SIZE_OF_BLOCK; i = i + META_ENTRY_SIZE){
+  fseek(file_pointer, meta_begin * SIZE_OF_BLOCK , SEEK_SET); //move to the begin of the disk
+  for(i = 0; i < meta_begin * SIZE_OF_BLOCK; i = i + META_ENTRY_SIZE){ //for each position inside the meta section in the linked list
     fseek(file_pointer, i + (meta_begin * SIZE_OF_BLOCK), SEEK_SET);
     fread(valid_check, 15, 1, file_pointer);
-    if(strcmp(valid_check, "") == 0){
-      sprintf(buffer, "%u", (meta_begin * SIZE_OF_BLOCK / 16) + 1 + (i / META_ENTRY_SIZE) );
+    if(strcmp(valid_check, "") == 0){ //if there is an empty space
+      sprintf(buffer, "%u", (meta_begin * SIZE_OF_BLOCK / 16) + 1 + (i / META_ENTRY_SIZE) ); //convert it into space for the global string buffer 
       return buffer;
     }
   }
@@ -241,12 +241,12 @@ char * find_free_data(){
 
 }
 int find_File(char * file_name){
-  char valid_check[12];
+  char valid_check[15];
   unsigned int return_index = -1;
-  fseek(file_pointer, 0, SEEK_SET);
+  fseek(file_pointer, 0, SEEK_SET); //move to the beginning of the file
   for(int i = 0; i < (meta_begin * SIZE_OF_BLOCK); i = i + FAT_ENTRY_SIZE){
-    fseek(file_pointer, i + 1, SEEK_SET);
-    fread(valid_check, 12, 1, file_pointer);
+    fseek(file_pointer, i + 1, SEEK_SET); //from beginning of the disk, move through each FAT entry inside the fs
+    fread(valid_check, 15, 1, file_pointer); //read the first 15 bits of the name of the file inside FAT 
     if(strcmp(valid_check, file_name) == 0){
       return_index = (i / 16) + 1;
       return return_index; //return the index inside the FAT
@@ -274,16 +274,17 @@ void print_meta(my_Meta * meta){ //print out meta information || use for Debuggi
   printf("Created: %s\n",meta->create_time);
   printf("Modified:: %s\n",meta->modify_time);
 }
-/**********User Level Functions**********/
+                                                                /**********User Level Functions**********/
 void create_file(char * file_name, char * dir){
   
-  my_FAT * new_fat_entry = malloc(32 * sizeof(my_FAT));
-  my_Meta * new_meta_entry = malloc(32 * sizeof(my_Meta));
+  my_FAT * new_fat_entry = malloc(32 * sizeof(my_FAT)); //32 times "enough space" for a new entry
+  my_Meta * new_meta_entry = malloc(32 * sizeof(my_Meta)); //32 times "enough space" for a new entry of meta section
   
-  char * meta_index = strdup(find_free_meta());
-  char * data_index = strdup(find_free_data());
-  char * FAT_index = strdup(find_free_fat_entry());
+  char * meta_index = strdup(find_free_meta()); //get next free meta entry
+  char * data_index = strdup(find_free_data()); //get next free data entry in the data section
+  char * FAT_index = strdup(find_free_fat_entry()); //get next free FAT entry in the FAT section
   
+  /*Check for insufficient resources*/
   if(strcmp(meta_index, "Error") == 0){
     puts("Failed to get a free spot in meta section");
   }
@@ -294,7 +295,7 @@ void create_file(char * file_name, char * dir){
     puts("Failed to get a free spot in the FAT");
   }
   //if file is a directory
-  if (strcmp(dir, "DIR") == 0){
+  if (strcmp(dir, "DIR") == 0){ //check if file is a directory
     int current_data = atoi(data_index) - 1;
     dir_current = 16 *current_data;
   }
@@ -326,6 +327,7 @@ void create_file(char * file_name, char * dir){
   print_meta(new_meta_entry);
   printf("FILE CREATED SUCCESS!\n");
 
+  //Display the file 
   size_t i = 0;
   char valid_read[1];
   for( i = 0; i < 32; i++){
@@ -401,14 +403,14 @@ void read_file(char * file_name){
   //printf("%c", holder[1]);
   //printf("%c", holder[2]);
   //printf("%c", holder[3]);
-  puts("------------------------------------");
+  puts("*************************************");
   for(int i = 0; i < strlen(holder); i++){
     printf("%c", holder[i]);
     //printf("WHAAAAAAAAA\n");
     
   } 
   printf("\n");
-  puts("------------------------------------");
+  puts("*************************************");
   
 
 }
