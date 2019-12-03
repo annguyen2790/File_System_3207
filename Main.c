@@ -70,18 +70,18 @@ void mainDriver(){
   }
 
 }
-void display_choices(){
+void display_choices(){ //display options for the user inputs
   printf("1. Create a file\n");
   printf("2. Write a file\n");
   printf("3. Read a file\n");
   printf("4. Delete a file\n");
   printf("5. List files\n");
-  printf("6. Create a directory\n");
+  printf("6. Create a directory(Not supported yet)\n");
   printf("7. Display info about a file\n");
   printf("8. Exit the file system!\n");
   
 }
-void get_choice(char choice [] ){
+void get_choice(char choice [] ){ //get user input for commands to run
   char holder_file [15];
   char * data_written = malloc(SIZE_OF_BLOCK*sizeof(char));
   if(strcmp(choice, "1") == 0 ){
@@ -130,12 +130,14 @@ void get_choice(char choice [] ){
 
 
 }
-FILE mount(){
-  file_pointer = fopen(DISK, "r+");
 
-  make_root_dir();
+/*****************File System Level Functions***********************/
+FILE mount(){
+  file_pointer = fopen(DISK, "r+"); //point the file pointer to the virtual disk
+
+  make_root_dir(); //create a root file/dir to start off the chain of linked list
   
-  return *file_pointer;
+  return *file_pointer; //return the address of file pointer, which is the location somewhere on the virtual disk
 
 
 }
@@ -158,10 +160,10 @@ void make_root_dir(){
   //printf("Root Name:%s\n", root->file_name);
   strcpy(root->check_bit_valid, "1");
 
-  sprintf(buffer, "%u", SIZE_OF_BLOCK * meta_begin / 15 + 1 );
+  sprintf(buffer, "%u", SIZE_OF_BLOCK * meta_begin / 16 + 1 );
   strcpy(root->meta_data_pointer, buffer);
 
-  sprintf(buffer, "%u", SIZE_OF_BLOCK * data_begin / 15 + 1 );
+  sprintf(buffer, "%u", SIZE_OF_BLOCK * data_begin / 16 + 1 );
   strcpy(root->data_pointer, buffer);
 
   strcpy(root->next_pointer, "-1");
@@ -272,7 +274,7 @@ void print_meta(my_Meta * meta){ //print out meta information || use for Debuggi
   printf("Created: %s\n",meta->create_time);
   printf("Modified:: %s\n",meta->modify_time);
 }
-
+/**********User Level Functions**********/
 void create_file(char * file_name, char * dir){
   
   my_FAT * new_fat_entry = malloc(32 * sizeof(my_FAT));
@@ -439,7 +441,7 @@ void delete_file(char * file_name){
   int FAT_index = find_File(file_name); //get the FAT index of this file
   
   if(FAT_index == -1){
-    printf("No such file existed on this disk\n");
+    printf("Unable to find FAT index from DELETE\n");
     return;
   }
   /*Delete the FAT entry of the file*/
@@ -476,7 +478,7 @@ void delete_file(char * file_name){
     fread(buffer, 1, 15, file_pointer); //read in the contents of the directory
     if(strcmp(buffer, file_name) == 0){ //if there is the name of the file you want to delete
       fseek(file_pointer, dir_current + (16 * i), SEEK_SET); //move the file pointer to it
-      fwrite(delete, sizeof(16), 1, file_pointer);
+      fwrite(delete, 16*sizeof(char), 1, file_pointer);
     }
     i++;
   }
@@ -497,10 +499,10 @@ void display_info(char * file_name){
   fseek(file_pointer, 16 * (FAT_index - 1), SEEK_SET);
   fseek(file_pointer, 13, SEEK_CUR);
   char meta_pointer [10];
-  int holder;
+  unsigned int holder;
   fread(meta_pointer, 1, 10, file_pointer);
   holder = atoi(meta_pointer) - 1;
-
+  
   fseek(file_pointer, 16 * holder, SEEK_SET);
   
   fread(name, 1, 15, file_pointer); //Name
@@ -508,6 +510,7 @@ void display_info(char * file_name){
   fread(time_created, 1, 27, file_pointer); //Created time
   fread(time_modified, 1, 27, file_pointer); //Modified time
 
+  printf("Name:%s\n", name);
   printf("Time Created:%s\n", time_created);
   printf("Time Modified:%s\n", time_modified);
 }
