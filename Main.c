@@ -131,7 +131,7 @@ void get_choice(char choice [] ){ //get user input for commands to run
 
 }
 
-                                                                   /*****************File System Level Functions***********************/
+                                                        /*****************File System Level Functions***********************/
 FILE mount(){
   file_pointer = fopen(DISK, "r+"); //point the file pointer to the virtual disk
 
@@ -223,10 +223,10 @@ char * find_free_meta(){
 
 }
 
-char * find_free_data(){
+char * find_free_data(){ //find free data section in the data section within the linked list 
   char valid_check [2];
   unsigned int i;
-  fseek(file_pointer, data_begin * SIZE_OF_BLOCK, SEEK_SET );
+  fseek(file_pointer, data_begin * SIZE_OF_BLOCK, SEEK_SET ); 
   for(i = 0; i <= (NUM_BLOCKS - data_begin) * DATA_ENTRY_SIZE; i = i + DATA_ENTRY_SIZE){
     fseek(file_pointer, i + (data_begin * SIZE_OF_BLOCK), SEEK_SET);
 
@@ -249,7 +249,7 @@ int find_File(char * file_name){
     fread(valid_check, 15, 1, file_pointer); //read the first 15 bits of the name of the file inside FAT 
     if(strcmp(valid_check, file_name) == 0){
       return_index = (i / 16) + 1;
-      return return_index; //return the index inside the FAT
+      return return_index; //return the index begining of the file_name inside the FAT
     }
 
   }
@@ -305,11 +305,11 @@ void create_file(char * file_name, char * dir){
   double FAT_i = atol(FAT_index) - 1;
   /*Fat ENTRY*/
   fseek(file_pointer, 16 * FAT_i, SEEK_SET);
-  strcpy(new_fat_entry->check_bit_valid, "1");
+  strcpy(new_fat_entry->check_bit_valid, "1"); //occupied so put it a 1
   strcpy(new_fat_entry->file_name, file_name);
   strcpy(new_fat_entry->meta_data_pointer, meta_index);
   strcpy(new_fat_entry->data_pointer, data_index);
-  strcpy(new_fat_entry->next_pointer, "-1");
+  strcpy(new_fat_entry->next_pointer, "-1"); //place the next pointer to -1
   fwrite(new_fat_entry, 512, 1, file_pointer);
   print_FAT(new_fat_entry);
   //Meta ENTRY
@@ -317,7 +317,7 @@ void create_file(char * file_name, char * dir){
   fseek(file_pointer, 16 * meta_i, SEEK_SET);
   strcpy(new_meta_entry->file_name, file_name);
   strcpy(new_meta_entry->extension, "");
-  if(strcmp(dir, "DIR") == 0){
+  if(strcmp(dir, "DIR") == 0){ //if the file is a directory upon creation then give it "DIR" extension
     strcpy(new_meta_entry->extension, "DIR");
   }
   strcpy(new_meta_entry->file_size, "512");
@@ -366,13 +366,13 @@ void write_file(char * data, char * file_name){
 
   fseek(file_pointer, data_begin + 16, SEEK_CUR); //go to data section
 
-  fread(data_pointer, 1, 9, file_pointer);
+  fread(data_pointer, 1, 9, file_pointer); //read data into the temp buffer
 
-  data_offset = atoi(data_pointer);
+  data_offset = atoi(data_pointer);  //get the # of offser to move to the free spaces; 
 
-  fseek(file_pointer, 16 * (data_offset - 1), SEEK_SET);
+  fseek(file_pointer, 16 * (data_offset - 1), SEEK_SET); //move to the free space
 
-  fwrite(data, 1, SIZE_OF_BLOCK, file_pointer);
+  fwrite(data, 1, SIZE_OF_BLOCK, file_pointer); //write contents to the free space
 
 }
 void read_file(char * file_name){
@@ -397,7 +397,7 @@ void read_file(char * file_name){
 
   fseek(file_pointer, 16 *(data_offset -1), SEEK_SET);
 
-  char holder[SIZE_OF_BLOCK];
+  char holder[SIZE_OF_BLOCK]; // a temp string buffer to display the contents inside a file
 
   fread(holder, 1, SIZE_OF_BLOCK, file_pointer);
   //printf("%c", holder[1]);
@@ -414,7 +414,7 @@ void read_file(char * file_name){
   
 
 }
-void list_files(){
+void list_files(){ //this function list the files on the disk
   char file_name[15] = {""};
   size_t i;
   printf("Here is a list of file on this virtual disk:\n");
@@ -426,7 +426,7 @@ void list_files(){
   printf("\n");
 
 }
-void file_shutdown(){
+void file_shutdown(){ //exit file system
   puts("Exited the file system. All created files on this virtual disk is destroyed. Good bye!");
   fclose(file_pointer);
   exit(0);
@@ -485,7 +485,7 @@ void delete_file(char * file_name){
     i++;
   }
 }
-void display_info(char * file_name){
+void display_info(char * file_name){ //display info (not working yet!)
   char name [15] = "";
   char extension[3] = "";
   char time_created[27] = "";
